@@ -15,7 +15,7 @@ spec:
       containers:
         - name: board-service
           image: board-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           ports:
             - containerPort: 8002
           env:
@@ -24,3 +24,8 @@ spec:
                 configMapKeyRef:
                   name: mongo-config
                   key: MONGO_URI
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: smart-secrets
+                  key: JWT_SECRET

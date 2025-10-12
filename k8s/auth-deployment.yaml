@@ -15,14 +15,14 @@ spec:
       containers:
         - name: auth-service
           image: auth-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
           env:
             - name: MONGO_URI
               valueFrom:
-                secretKeyRef:
-                  name: smart-secrets
+                configMapKeyRef:
+                  name: mongo-config
                   key: MONGO_URI
             - name: JWT_SECRET
               valueFrom:
