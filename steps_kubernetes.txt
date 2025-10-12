@@ -1,0 +1,25 @@
+Step 1 — (This step only creates the control plane)
+=> Create Cluster
+    => Cluster name: smart-task-cluster
+    => Kubernetes version: keep the latest stable 
+    => Cluster service role: If you don’t have one, Create role in IAM → choose EKS - Cluster → attach → come back and refresh. Select that IAM role.
+    => Networking: Use the default VPC 
+
+
+Step 2 — Add Node Group (worker nodes)
+=> Once the cluster is Active, open it → go to the Compute tab → click Add node group.
+=> Name: smart-nodes
+=> Go to IAM → Roles → Create Role
+=> Select AWS service → EC2. Click Next → Permissions Attach these policies: AmazonEKSWorkerNodePolicy, AmazonEKS_CNI_Policy, AmazonEC2ContainerRegistryReadOnly
+=> Name it something like EKS-NodeGroupRole.
+=> Go back to your EKS Node Group creation wizard, and select this role manually.
+=> Instance type → t3.medium, Desired size: 2 nodes. (min 1, max 2).
+=> Leave defaults for scaling, disk, etc. Click Create → wait ~10 minutes.
+
+
+Step 3 — Connect with kubectl
+=> Run in terminal: (This updates your local kubeconfig so that kubectl points to the new cluster.)
+aws eks --region us-east-1 update-kubeconfig --name smart-task-cluster
+=> kubectl get nodes (You should see 2 nodes in Ready state.)
+
+

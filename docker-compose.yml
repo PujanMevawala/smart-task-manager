@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      - mongo
+
+  task-service:
+    build: ./task-service
+    container_name: task-service
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./task-service/.env
+    depends_on:
+      - mongo
+      - auth-service
+
+  board-service:
+    build: ./board-service
+    container_name: board-service
+    restart: always
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./board-service/.env
+    depends_on:
+      - mongo
+      - auth-service
+
+volumes:
+  mongo_data:
