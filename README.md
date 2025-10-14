@@ -175,92 +175,184 @@ kubectl get pods
   ```bash
   curl -H "Authorization: Bearer <your-token>" http://localhost:8001/api/tasks
   ```
+ # Smart Task Manager
 
-### Board Service (http://localhost:8002)
+Production-ready, microservices-based task management application built with Node.js, Express, MongoDB and Kubernetes.
 
-- **POST /api/boards**
+This document explains the architecture, local development flow, infrastructure-as-code (Terraform) usage, CI/CD (GitHub Actions), security scanning, and deployment recommendations.
 
-  - Create a new board
+## Table of contents
+- Project overview
+- Architecture
+- Getting started (quick)
+- Local development (Docker Compose & Minikube)
+- Infrastructure as Code (Terraform)
+- CI/CD (GitHub Actions)
+- Security (Trivy integration)
+- Production recommendations
+- Troubleshooting & Monitoring
+- Contributing
+- License
 
-  ```bash
-  curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <your-token>" -d '{"name": "Test Board", "description": "Test Board Description"}' http://localhost:8002/api/boards
-  ```
+## Project overview
 
-- **GET /api/boards**
-  - Get all boards
-  ```bash
-  curl -H "Authorization: Bearer <your-token>" http://localhost:8002/api/boards
-  ```
+This repository contains three primary microservices:
 
-## Monitoring and Debugging
+- `auth-service` — user registration, authentication and JWT issuance
+- `task-service` — CRUD operations for tasks
+- `board-service` — boards management
 
-1. View service logs:
+Each service is a standalone Node.js app with its own Dockerfile and manifests in `k8s/`. The repository also contains Terraform skeleton under `infra/terraform/` and a CI/CD workflow in `.github/workflows/ci-cd.yml`.
+
+## Architecture
+
+- Services communicate internally via Kubernetes DNS and `ClusterIP` services.
+- A single Ingress acts as the public API gateway (paths routed to internal services).
+- MongoDB runs as a single instance for local/dev; in production use a managed or replicated cluster.
+- CI builds and scans images; Terraform manages namespace + workloads for local clusters.
+
+Diagram (logical):
+
+Ingress -> auth-service (ClusterIP)
+        -> task-service (ClusterIP)
+        -> board-service (ClusterIP)
+
+MongoDB (Stateful) -> auth/task/board (via MONGO_URI)
+
+## Getting started (quick)
+
+Prerequisites
+- Docker (Desktop)
+- Node.js (18+)
+- kubectl
+- minikube or kind
+- Terraform (0.13+)
+
+Quick start (dev with Docker Compose)
+
+1. Build and run services with Docker Compose (local dev database):
 
 ```bash
-# Auth Service logs
-kubectl logs -l app=auth-service
-
-# Board Service logs
-kubectl logs -l app=board-service
-
-# Task Service logs
-kubectl logs -l app=task-service
+docker compose up --build
 ```
 
-2. Check service status:
+2. The services will be available on:
+- Auth: http://localhost:8000
+- Task: http://localhost:8001
+- Board: http://localhost:8002
+
+Use the provided API examples in `k8s/` or `README` for testing endpoints.
+
+## Local Kubernetes (minikube) — recommended flow
+
+1. Start minikube and enable ingress:
 
 ```bash
-kubectl get svc
+minikube start
+minikube addons enable ingress
 ```
 
-3. Check ingress status:
+2. Build images locally and load into minikube:
 
 ```bash
+docker build -t auth-service:latest ./auth-service
+docker build -t task-service:latest ./task-service
+docker build -t board-service:latest ./board-service
+
+# Load into minikube so the cluster can use local images
+minikube image load auth-service:latest
+minikube image load task-service:latest
+minikube image load board-service:latest
+```
+
+3. Apply Kubernetes manifests (services are ClusterIP; ingress is public):
+
+```bash
+kubectl apply -f k8s/mongo-config.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/mongo-deployment.yaml
+kubectl apply -f k8s/mongo-service.yaml
+
+kubectl apply -f k8s/auth-deployment.yaml
+kubectl apply -f k8s/auth-service.yaml
+kubectl apply -f k8s/task-deployment.yaml
+kubectl apply -f k8s/task-service.yaml
+kubectl apply -f k8s/board-deployment.yaml
+kubectl apply -f k8s/board-service.yaml
+
+kubectl apply -f k8s/ingress.yaml
+```
+
+4. Verify:
+
+```bash
+kubectl get pods -A
+kubectl get svc -n default
 kubectl get ingress
 ```
 
-## Cleanup
+Notes:
+- Use `minikube service <svc> --url` for direct service URLs during local testing.
 
-To clean up all resources:
+## Terraform (infra/terraform)
 
-```bash
-kubectl delete -f k8s/
-minikube stop
-```
+The repository contains a minimal Terraform configuration that creates a namespace and Deployments/Services using the Kubernetes provider. It is intended for local use (with an existing kubeconfig from minikube/kind).
 
-## Environment Variables
-
-The following environment variables are required for each service:
-
-- **MONGO_URI**: MongoDB connection string
-- **JWT_SECRET**: Secret key for JWT token generation/validation
-
-These are configured in the Kubernetes secrets and automatically injected into the services.
-
-## Security
-
-- JWT-based authentication
-- Protected routes using middleware
-- Secure password hashing
-- Environment variables for sensitive data
-
-## Known Issues and Solutions
-
-1. If services can't connect to MongoDB, check if the MongoDB pod is running and the config is correct:
+How to use:
 
 ```bash
-kubectl get pods
-kubectl describe configmap mongo-config
+cd infra/terraform
+terraform init
+terraform apply
 ```
 
-2. If authentication fails between services, verify the JWT_SECRET is consistent:
+Important:
+- Terraform expects the images referenced (defaults: `auth-service:latest`, `task-service:latest`, `board-service:latest`) to be available in the cluster (use `minikube image load` or push to a registry and change variables).
+- The Terraform manifests are a skeleton — for production, convert to Helm charts or a full terraform module with secrets management.
 
-```bash
-kubectl describe secret smart-secrets
-```
+## CI/CD (GitHub Actions)
 
-3. If ingress is not working, verify the ingress controller is running:
+The `.github/workflows/ci-cd.yml` file implements a pipeline that runs on pushes to `main`:
 
-```bash
-kubectl get pods -n ingress-nginx
-```
+- Checks out the repo and sets up Node.js
+- Installs dependencies and runs tests (per-service if `package.json` provides `test` script)
+- Builds Docker images locally in the runner
+- Runs Trivy filesystem scan against the repository
+- Validates Kubernetes manifests using `kubectl apply --dry-run=client`
+
+Notes and best practices:
+- The pipeline currently builds images but does not push them to a registry — to deploy from CI to a cluster, add a step that authenticates and pushes images to a registry (DockerHub, GHCR) and update Terraform variables to point to those images.
+- Store any secrets (registry credentials, kubeconfig) in GitHub Secrets when enabling real deployment.
+
+## Security (DevSecOps)
+
+- Trivy is integrated into the CI to perform quick filesystem scans on the built artifacts.
+- For production, add:
+  - Image scanning on built/pushed images
+  - Dependency scanning (e.g., npm audit, Snyk)
+  - IaC scanning (e.g., tfsec for Terraform, kube-linter for K8s manifests)
+
+## Production recommendations
+
+1. Replace local MongoDB with a managed or highly-available DB (MongoDB Atlas, cloud provider hosted, or a replicated StatefulSet).
+2. Use a container registry (GHCR/AWS ECR/DockerHub) and make CI push versioned images.
+3. Use Helm charts or a GitOps approach (ArgoCD/Flux) for environment promotion.
+4. Add health/readiness probes, resource requests/limits, and PodDisruptionBudgets.
+5. Configure centralized logging (ELK/EFK), metrics (Prometheus/Grafana), and tracing (OpenTelemetry).
+6. Secrets: use Vault or cloud provider secret manager and avoid storing secrets as plain Kubernetes Secrets in git.
+
+## Troubleshooting & Monitoring
+
+- If pods aren't starting: `kubectl describe pod <pod>` and `kubectl logs <pod>`.
+- If services can't reach MongoDB: verify `MONGO_URI` and `kubectl get svc` for Mongo service and ensure DNS resolves.
+- Ingress not routing: ensure ingress controller is running (`kubectl get pods -n ingress-nginx`) and that host/path rules match.
+
+## Contributing
+
+1. Fork the repo and create a feature branch.
+2. Run unit tests and linters locally.
+3. Open a PR with a clear description and link to related issues.
+
+## License
+
+This project uses an MIT-style license (update as required).
