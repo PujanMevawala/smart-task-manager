@@ -74,16 +74,19 @@ smart-task-manager/
 ## Setting Up the Environment
 
 1. Start Minikube:
+
 ```bash
 minikube start
 ```
 
 2. Enable the Ingress addon:
+
 ```bash
 minikube addons enable ingress
 ```
 
 3. Build Docker images for each service:
+
 ```bash
 # Build Auth Service
 cd auth-service
@@ -99,6 +102,7 @@ docker build -t task-service:latest .
 ```
 
 4. Create Kubernetes Resources:
+
 ```bash
 # Create MongoDB ConfigMap and Secrets
 kubectl apply -f k8s/mongo-config.yaml
@@ -125,6 +129,7 @@ kubectl apply -f k8s/ingress.yaml
 ```
 
 5. Verify all pods are running:
+
 ```bash
 kubectl get pods
 ```
@@ -134,13 +139,17 @@ kubectl get pods
 ### Auth Service (http://localhost:8000)
 
 - **POST /api/auth/register**
+
   - Register a new user
+
   ```bash
   curl -X POST -H "Content-Type: application/json" -d '{"name": "Test User", "username": "testuser", "email": "test@example.com", "password": "password123"}' http://localhost:8000/api/auth/register
   ```
 
 - **POST /api/auth/login**
+
   - Login with existing credentials
+
   ```bash
   curl -X POST -H "Content-Type: application/json" -d '{"email": "test@example.com", "password": "password123"}' http://localhost:8000/api/auth/login
   ```
@@ -154,7 +163,9 @@ kubectl get pods
 ### Task Service (http://localhost:8001)
 
 - **POST /api/tasks**
+
   - Create a new task
+
   ```bash
   curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <your-token>" -d '{"title": "Test Task", "description": "Test Task Description", "status": "todo"}' http://localhost:8001/api/tasks
   ```
@@ -168,7 +179,9 @@ kubectl get pods
 ### Board Service (http://localhost:8002)
 
 - **POST /api/boards**
+
   - Create a new board
+
   ```bash
   curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <your-token>" -d '{"name": "Test Board", "description": "Test Board Description"}' http://localhost:8002/api/boards
   ```
@@ -182,6 +195,7 @@ kubectl get pods
 ## Monitoring and Debugging
 
 1. View service logs:
+
 ```bash
 # Auth Service logs
 kubectl logs -l app=auth-service
@@ -194,11 +208,13 @@ kubectl logs -l app=task-service
 ```
 
 2. Check service status:
+
 ```bash
 kubectl get svc
 ```
 
 3. Check ingress status:
+
 ```bash
 kubectl get ingress
 ```
@@ -206,6 +222,7 @@ kubectl get ingress
 ## Cleanup
 
 To clean up all resources:
+
 ```bash
 kubectl delete -f k8s/
 minikube stop
@@ -230,17 +247,20 @@ These are configured in the Kubernetes secrets and automatically injected into t
 ## Known Issues and Solutions
 
 1. If services can't connect to MongoDB, check if the MongoDB pod is running and the config is correct:
+
 ```bash
 kubectl get pods
 kubectl describe configmap mongo-config
 ```
 
 2. If authentication fails between services, verify the JWT_SECRET is consistent:
+
 ```bash
 kubectl describe secret smart-secrets
 ```
 
 3. If ingress is not working, verify the ingress controller is running:
+
 ```bash
 kubectl get pods -n ingress-nginx
 ```

@@ -1,5 +1,14 @@
 node_modules
 npm-debug.log
+.env
+Dockerfile
+README.md
+.git
+.gitignore
+k8s
+infra
+node_modules
+npm-debug.log
 Dockerfile
 .dockerignore
 .env
