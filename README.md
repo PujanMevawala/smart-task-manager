@@ -175,13 +175,15 @@ kubectl get pods
   ```bash
   curl -H "Authorization: Bearer <your-token>" http://localhost:8001/api/tasks
   ```
- # Smart Task Manager
+
+# Smart Task Manager
 
 Production-ready, microservices-based task management application built with Node.js, Express, MongoDB and Kubernetes.
 
 This document explains the architecture, local development flow, infrastructure-as-code (Terraform) usage, CI/CD (GitHub Actions), security scanning, and deployment recommendations.
 
 ## Table of contents
+
 - Project overview
 - Architecture
 - Getting started (quick)
@@ -214,14 +216,15 @@ Each service is a standalone Node.js app with its own Dockerfile and manifests i
 Diagram (logical):
 
 Ingress -> auth-service (ClusterIP)
-        -> task-service (ClusterIP)
-        -> board-service (ClusterIP)
+-> task-service (ClusterIP)
+-> board-service (ClusterIP)
 
 MongoDB (Stateful) -> auth/task/board (via MONGO_URI)
 
 ## Getting started (quick)
 
 Prerequisites
+
 - Docker (Desktop)
 - Node.js (18+)
 - kubectl
@@ -237,6 +240,7 @@ docker compose up --build
 ```
 
 2. The services will be available on:
+
 - Auth: http://localhost:8000
 - Task: http://localhost:8001
 - Board: http://localhost:8002
@@ -292,6 +296,7 @@ kubectl get ingress
 ```
 
 Notes:
+
 - Use `minikube service <svc> --url` for direct service URLs during local testing.
 
 ## Terraform (infra/terraform)
@@ -307,6 +312,7 @@ terraform apply
 ```
 
 Important:
+
 - Terraform expects the images referenced (defaults: `auth-service:latest`, `task-service:latest`, `board-service:latest`) to be available in the cluster (use `minikube image load` or push to a registry and change variables).
 - The Terraform manifests are a skeleton — for production, convert to Helm charts or a full terraform module with secrets management.
 
@@ -321,6 +327,7 @@ The `.github/workflows/ci-cd.yml` file implements a pipeline that runs on pushes
 - Validates Kubernetes manifests using `kubectl apply --dry-run=client`
 
 Notes and best practices:
+
 - The pipeline currently builds images but does not push them to a registry — to deploy from CI to a cluster, add a step that authenticates and pushes images to a registry (DockerHub, GHCR) and update Terraform variables to point to those images.
 - Store any secrets (registry credentials, kubeconfig) in GitHub Secrets when enabling real deployment.
 
