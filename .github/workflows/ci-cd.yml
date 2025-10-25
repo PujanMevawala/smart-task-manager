@@ -13,6 +13,12 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+# Required permissions for security scanning and SARIF uploads
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 env:
   DOCKER_REGISTRY: docker.io
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME || 'pujan' }}
@@ -24,11 +30,11 @@ jobs:
   # Job 1: Code Quality & Security Checks
   ###########################################################################
   code-quality:
-    name: 📊 Code Quality & Security Scan
+    name: Code Quality & Security Scan
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Node.js
@@ -79,11 +85,13 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
 
-      - name: 📤 Upload Trivy Results
+      - name: 📤 Upload Trivy Results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-fs-results.sarif'
+          category: 'filesystem-scan'
 
       - name: 🔐 Secret Scanning
         continue-on-error: true
