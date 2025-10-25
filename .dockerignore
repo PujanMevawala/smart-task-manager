@@ -1,17 +1,33 @@
+# Dependencies
 node_modules
+
+# Environment
+.env
+
+# Logs
 npm-debug.log
-.env
+*.log
+
+# macOS
 .DS_Store
-.env
-k8s
-infra
+
+# Git
 .git
 .gitignore
+
+# Kubernetes
+k8s
+
+# Infrastructure
+infra
+
+# Docker
 .dockerignore
 Dockerfile
+
+# Documentation
 README.md
-.git
-.gitignore
-k8s
-infra
-.dockerignore
+*.md
+
+# CI/CD
+.github
