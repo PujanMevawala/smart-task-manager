@@ -46,7 +46,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          for service in auth-service task-service board-service; do
+          for service in auth-service task-service board-service frontend; do
             echo "Installing dependencies for $service..."
             cd $service && npm ci && cd ..
           done
@@ -54,7 +54,7 @@ jobs:
       - name: Run Tests
         continue-on-error: true
         run: |
-          for service in auth-service task-service board-service; do
+          for service in auth-service task-service board-service frontend; do
             echo "Testing $service..."
             cd $service
             if grep -q '"test"' package.json; then
@@ -66,7 +66,7 @@ jobs:
       - name: Lint Code
         continue-on-error: true
         run: |
-          for service in auth-service task-service board-service; do
+          for service in auth-service task-service board-service frontend; do
             echo "Linting $service..."
             cd $service
             if grep -q '"lint"' package.json; then
@@ -109,7 +109,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [auth-service, task-service, board-service]
+        service: [auth-service, task-service, board-service, frontend]
 
     steps:
       - name: Checkout Code
@@ -263,6 +263,7 @@ jobs:
           minikube image load auth-service:latest
           minikube image load task-service:latest
           minikube image load board-service:latest
+          minikube image load frontend:latest
 
           # 3. Deploy with Terraform
           cd infra/terraform
