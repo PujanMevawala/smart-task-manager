@@ -261,19 +261,95 @@ minikube addons enable ingress
 ```bash
 docker build -t auth-service:latest ./auth-service
 docker build -t task-service:latest ./task-service
+# Smart Task Manager — Runbook & Summary
+
+This repository contains a simple microservices task manager (three Node.js services) plus Kubernetes manifests, a Terraform skeleton, and a CI/CD workflow. This README explains what changed, how to run everything locally (Docker Compose) and on a local Kubernetes cluster (minikube), and how secrets are handled.
+
+## What changed (recent work)
+- Converted Dockerfiles to multi-stage builds for smaller production images.
+- Kubernetes Services use `ClusterIP` for internal DNS-based service-to-service communication; a single Ingress is the public entry point.
+- Added a Terraform skeleton (`infra/terraform/`) to manage namespace/deployments/services locally.
+- Added GitHub Actions CI with a Trivy scan step for security checks.
+- Normalized `.dockerignore` and `.gitignore`. Tracked `.env` files were removed and `*.env.example` files were added for each service.
+
+## Short repo layout
+- `auth-service/`, `task-service/`, `board-service/` — Node.js services
+- `k8s/` — Kubernetes manifests (deployments, services, ingress, mongo)
+- `infra/terraform/` — Terraform skeleton
+- `.github/workflows/ci-cd.yml` — CI pipeline (build/test/scan)
+
+## Secrets and `.env` files (IMPORTANT)
+- Local `.env` files are not tracked. Copy `*.env.example` to `*.env` and set secure values locally. Do not commit `.env`.
+- Prefer creating Kubernetes secrets at deploy time from local `.env` files. Example:
+
+```bash
+# create/update k8s secret from auth-service .env (local)
+kubectl create secret generic smart-secrets --from-env-file=auth-service/.env --dry-run=client -o yaml | kubectl apply -f -
+```
+
+If a secret was pushed to a remote previously, rotate it immediately. I can prepare a safe history-purge plan if needed.
+
+---
+
+## Quick run — Docker Compose (fast local dev)
+1. Copy examples locally (do not commit these files):
+
+```bash
+cp auth-service/.env.example auth-service/.env
+cp task-service/.env.example task-service/.env
+cp board-service/.env.example board-service/.env
+# Edit each .env to replace JWT_SECRET with a secure value
+```
+
+2. Start the stack:
+
+```bash
+docker compose up --build
+```
+
+3. Services:
+- Auth: http://localhost:8000
+- Task: http://localhost:8001
+- Board: http://localhost:8002
+
+4. Stop:
+
+```bash
+docker compose down
+```
+
+---
+
+## Run on Kubernetes (minikube)
+1. Start minikube and enable ingress:
+
+```bash
+minikube start
+minikube addons enable ingress
+```
+
+2. Build images and load into minikube (no registry required):
+
+```bash
+docker build -t auth-service:latest ./auth-service
+docker build -t task-service:latest ./task-service
 docker build -t board-service:latest ./board-service
 
-# Load into minikube so the cluster can use local images
 minikube image load auth-service:latest
 minikube image load task-service:latest
 minikube image load board-service:latest
 ```
 
-3. Apply Kubernetes manifests (services are ClusterIP; ingress is public):
+3. Create Mongo config and secrets (preferred: from local `.env`):
 
 ```bash
 kubectl apply -f k8s/mongo-config.yaml
-kubectl apply -f k8s/secrets.yaml
+kubectl create secret generic smart-secrets --from-env-file=auth-service/.env --dry-run=client -o yaml | kubectl apply -f -
+```
+
+4. Deploy manifests:
+
+```bash
 kubectl apply -f k8s/mongo-deployment.yaml
 kubectl apply -f k8s/mongo-service.yaml
 
@@ -287,7 +363,7 @@ kubectl apply -f k8s/board-service.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-4. Verify:
+5. Verify:
 
 ```bash
 kubectl get pods -A
@@ -295,71 +371,35 @@ kubectl get svc -n default
 kubectl get ingress
 ```
 
-Notes:
+Tip: `minikube service <svc> --url` gives a quick service URL for debugging.
 
-- Use `minikube service <svc> --url` for direct service URLs during local testing.
+---
 
-## Terraform (infra/terraform)
+## CI/CD and image registry
+- The workflow builds and scans images but doesn't push them to a registry by default. To enable CI-driven deploys you should:
+  1. Create a registry (GHCR/Docker Hub/ECR) and a service account or token.
+  2. Add registry credentials as GitHub Secrets.
+  3. Update `.github/workflows/ci-cd.yml` to login and push images.
+  4. Update Terraform/K8s to reference `registry/image:tag` instead of local `auth-service:latest`.
 
-The repository contains a minimal Terraform configuration that creates a namespace and Deployments/Services using the Kubernetes provider. It is intended for local use (with an existing kubeconfig from minikube/kind).
+---
 
-How to use:
+## Security & production notes
+- Do not store secrets as plain files in git. Use secret managers (Vault, cloud KMS) and generate k8s secrets at deploy time.
+- Add readiness/liveness probes, resource requests/limits, and PDBs before production.
+- Add image and dependency scanning in CI (Trivy + npm audit/Snyk).
 
-```bash
-cd infra/terraform
-terraform init
-terraform apply
-```
+## Files changed recently (high level)
+- Multi-stage Dockerfiles for services
+- Per-service `.dockerignore` files
+- `k8s/` manifests updated to use `ClusterIP` services, with an `ingress.yaml` for external routing
+- `infra/terraform/` skeleton added
+- `.github/workflows/ci-cd.yml` added (includes Trivy scan)
+- `.env.example` files added; tracked `.env` files removed
 
-Important:
+## Next optional tasks I can do for you
+- Replace `k8s/secrets.yaml` with `k8s/secrets.yaml.template` and commit (to avoid storing base64 secrets in git).
+- Add a `Makefile` or `scripts/dev-deploy.sh` that automates build/load/apply for minikube.
+- Run a full git-history secret scan and prepare a purge plan if any secrets are present in history.
 
-- Terraform expects the images referenced (defaults: `auth-service:latest`, `task-service:latest`, `board-service:latest`) to be available in the cluster (use `minikube image load` or push to a registry and change variables).
-- The Terraform manifests are a skeleton — for production, convert to Helm charts or a full terraform module with secrets management.
-
-## CI/CD (GitHub Actions)
-
-The `.github/workflows/ci-cd.yml` file implements a pipeline that runs on pushes to `main`:
-
-- Checks out the repo and sets up Node.js
-- Installs dependencies and runs tests (per-service if `package.json` provides `test` script)
-- Builds Docker images locally in the runner
-- Runs Trivy filesystem scan against the repository
-- Validates Kubernetes manifests using `kubectl apply --dry-run=client`
-
-Notes and best practices:
-
-- The pipeline currently builds images but does not push them to a registry — to deploy from CI to a cluster, add a step that authenticates and pushes images to a registry (DockerHub, GHCR) and update Terraform variables to point to those images.
-- Store any secrets (registry credentials, kubeconfig) in GitHub Secrets when enabling real deployment.
-
-## Security (DevSecOps)
-
-- Trivy is integrated into the CI to perform quick filesystem scans on the built artifacts.
-- For production, add:
-  - Image scanning on built/pushed images
-  - Dependency scanning (e.g., npm audit, Snyk)
-  - IaC scanning (e.g., tfsec for Terraform, kube-linter for K8s manifests)
-
-## Production recommendations
-
-1. Replace local MongoDB with a managed or highly-available DB (MongoDB Atlas, cloud provider hosted, or a replicated StatefulSet).
-2. Use a container registry (GHCR/AWS ECR/DockerHub) and make CI push versioned images.
-3. Use Helm charts or a GitOps approach (ArgoCD/Flux) for environment promotion.
-4. Add health/readiness probes, resource requests/limits, and PodDisruptionBudgets.
-5. Configure centralized logging (ELK/EFK), metrics (Prometheus/Grafana), and tracing (OpenTelemetry).
-6. Secrets: use Vault or cloud provider secret manager and avoid storing secrets as plain Kubernetes Secrets in git.
-
-## Troubleshooting & Monitoring
-
-- If pods aren't starting: `kubectl describe pod <pod>` and `kubectl logs <pod>`.
-- If services can't reach MongoDB: verify `MONGO_URI` and `kubectl get svc` for Mongo service and ensure DNS resolves.
-- Ingress not routing: ensure ingress controller is running (`kubectl get pods -n ingress-nginx`) and that host/path rules match.
-
-## Contributing
-
-1. Fork the repo and create a feature branch.
-2. Run unit tests and linters locally.
-3. Open a PR with a clear description and link to related issues.
-
-## License
-
-This project uses an MIT-style license (update as required).
+Prepared on: 2025-10-25
