@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.env
+.DS_Store
+.env
+k8s
+infra
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+.git
+.gitignore
+k8s
+infra
+.dockerignore
