@@ -32,26 +32,26 @@ jobs:
   code-quality:
     name: Code Quality & Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name:  Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "**/package-lock.json"
 
-      - name:  Install Dependencies
+      - name: Install Dependencies
         run: |
           for service in auth-service task-service board-service; do
             echo "Installing dependencies for $service..."
             cd $service && npm ci && cd ..
           done
 
-      - name:  Run Tests
+      - name: Run Tests
         continue-on-error: true
         run: |
           for service in auth-service task-service board-service; do
@@ -63,7 +63,7 @@ jobs:
             cd ..
           done
 
-      - name:  Lint Code
+      - name: Lint Code
         continue-on-error: true
         run: |
           for service in auth-service task-service board-service; do
@@ -75,25 +75,25 @@ jobs:
             cd ..
           done
 
-      - name:  Security Scan - Filesystem
+      - name: Security Scan - Filesystem
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-fs-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-fs-results.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
 
-      - name:  Upload Trivy Results to GitHub Security
+      - name: Upload Trivy Results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         continue-on-error: true
         with:
-          sarif_file: 'trivy-fs-results.sarif'
-          category: 'filesystem-scan'
+          sarif_file: "trivy-fs-results.sarif"
+          category: "filesystem-scan"
 
-      - name:  Secret Scanning
+      - name: Secret Scanning
         continue-on-error: true
         run: |
           echo "Checking for hardcoded secrets..."
@@ -103,22 +103,22 @@ jobs:
   # Job 2: Build & Push Docker Images
   ###########################################################################
   build-push:
-    name:  Build & Push Docker Images
+    name: Build & Push Docker Images
     runs-on: ubuntu-latest
     needs: code-quality
-    
+
     strategy:
       matrix:
         service: [auth-service, task-service, board-service]
-    
+
     steps:
-      - name:  Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name:  Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name:  Login to Docker Hub
+      - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
@@ -126,7 +126,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
         continue-on-error: true
 
-      - name:  Docker Metadata
+      - name: Docker Metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -137,7 +137,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
 
-      - name:  Build Docker Image
+      - name: Build Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
@@ -149,17 +149,17 @@ jobs:
           build-args: |
             NODE_ENV=production
 
-      - name:  Trivy Image Scan
+      - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ matrix.service }}:latest'
-          format: 'table'
-          exit-code: '0'
+          image-ref: "${{ matrix.service }}:latest"
+          format: "table"
+          exit-code: "0"
           ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
 
-      - name:  Push to Docker Hub
+      - name: Push to Docker Hub
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
@@ -175,7 +175,7 @@ jobs:
         run: |
           docker save ${{ matrix.service }}:latest | gzip > ${{ matrix.service }}.tar.gz
 
-      - name:  Upload Image Artifact
+      - name: Upload Image Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.service }}-image
@@ -189,12 +189,12 @@ jobs:
     name: 🏗️ Infrastructure Validation
     runs-on: ubuntu-latest
     needs: code-quality
-    
+
     steps:
-      - name:  Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name:  Setup Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
@@ -204,7 +204,7 @@ jobs:
           cd infra/terraform
           terraform init
 
-      - name:  Terraform Validate
+      - name: Terraform Validate
         run: |
           cd infra/terraform
           terraform validate
@@ -214,19 +214,19 @@ jobs:
           cd infra/terraform
           terraform fmt -check -recursive || (terraform fmt -recursive && echo "Formatted files")
 
-      - name:  Terraform Plan (Dry Run)
+      - name: Terraform Plan (Dry Run)
         run: |
           cd infra/terraform
           terraform plan -input=false || echo "Plan requires actual Kubernetes cluster"
         continue-on-error: true
 
-      - name:  Validate Kubernetes Manifests
+      - name: Validate Kubernetes Manifests
         run: |
           # Install kubectl
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
-          
+
           # Dry-run validation
           kubectl apply -f k8s/ --dry-run=client || echo "K8s manifests validation complete"
 
@@ -234,104 +234,104 @@ jobs:
   # Job 4: Deploy to Kubernetes (Manual/Local)
   ###########################################################################
   deploy-instructions:
-    name:  Deployment Instructions
+    name: Deployment Instructions
     runs-on: ubuntu-latest
     needs: [build-push, infrastructure-check]
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-      - name:  Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name:  Generate Deployment Guide
+      - name: Generate Deployment Guide
         run: |
           cat << 'EOF' > DEPLOYMENT_GUIDE.md
           #  Smart Task Manager - Deployment Guide
-          
+
           ##  CI/CD Pipeline Completed
-          
+
           All images have been built, scanned, and are ready for deployment.
-          
+
           ##  Deployment Options
-          
+
           ### Option 1: Terraform Deployment (Recommended)
           ```bash
           # 1. Build images locally
           ./scripts/build-images.sh
-          
+
           # 2. Load into Minikube
           minikube image load auth-service:latest
           minikube image load task-service:latest
           minikube image load board-service:latest
-          
+
           # 3. Deploy with Terraform
           cd infra/terraform
           terraform init
           terraform plan
           terraform apply
-          
+
           # 4. Verify deployment
           kubectl get all -n default
           ```
-          
+
           ### Option 2: Direct Kubernetes Deployment
           ```bash
           kubectl apply -f k8s/
           ```
-          
+
           ### Option 3: Docker Compose (Development)
           ```bash
           docker-compose up -d
           ```
-          
+
           ## 🌐 Public Access Setup
           ```bash
           # Start Minikube tunnel (in separate terminal)
           sudo minikube tunnel
-          
+
           # Start ngrok tunnel
           ./scripts/setup-ngrok.sh
           ```
-          
+
           ##  Testing Endpoints
           ```bash
           # Get the public URL
           PUBLIC_URL=$(cat .ngrok_url 2>/dev/null || echo "http://localhost")
-          
+
           # Test auth service
           curl $PUBLIC_URL/api/auth/
-          
+
           # Register a user
           curl -X POST $PUBLIC_URL/api/auth/register \
             -H "Content-Type: application/json" \
             -d '{"name":"test","email":"test@example.com","password":"password123"}'
           ```
-          
+
           ##  Monitoring
           ```bash
           # Check pod status
           kubectl get pods -n default
-          
+
           # View logs
           kubectl logs -f deployment/auth-service -n default
-          
+
           # Check Terraform state
           cd infra/terraform && terraform show
           ```
-          
+
           ## 🔒 Security Notes
           - All secrets are managed via Kubernetes secrets
           - Docker images scanned with Trivy
           - Non-root user in containers
           - Resource limits enforced
-          
+
           ---
           Generated by CI/CD Pipeline - $(date)
           EOF
-          
+
           cat DEPLOYMENT_GUIDE.md
 
-      - name:  Upload Deployment Guide
+      - name: Upload Deployment Guide
         uses: actions/upload-artifact@v4
         with:
           name: deployment-guide
@@ -345,15 +345,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-push]
     if: always()
-    
+
     steps:
-      - name:  Generate Security Report
+      - name: Generate Security Report
         run: |
           cat << 'EOF' > SECURITY_REPORT.md
           # 🔒 Security Report - Smart Task Manager
-          
+
           ##  Security Measures Implemented
-          
+
           ### 1. Docker Security
           -  Multi-stage builds
           -  Non-root user (UID 1001)
@@ -361,26 +361,26 @@ jobs:
           -  No hardcoded secrets
           -  .dockerignore files
           -  Security patches applied
-          
+
           ### 2. Kubernetes Security
           -  Secrets management (K8s secrets)
           -  Resource limits (CPU/Memory)
           -  Health checks (liveness/readiness)
           -  Network policies ready
           -  RBAC ready
-          
+
           ### 3. CI/CD Security
           -  Trivy vulnerability scanning
           -  Secret scanning in code
           -  SARIF report upload
           -  Dependency audit
-          
+
           ### 4. Application Security
           -  JWT authentication
           -  Password hashing (bcrypt)
           -  Input validation (Joi)
           -  MongoDB injection protection
-          
+
           ##  Security Checklist
           - [x] Container image scanning
           - [x] Secrets externalized
@@ -388,16 +388,16 @@ jobs:
           - [x] Resource quotas
           - [x] Health monitoring
           - [x] Secure communication (ready for TLS)
-          
+
           ## 🎯 DevSecOps Score: 2/2
-          
+
           ---
           Report generated: $(date)
           EOF
-          
+
           cat SECURITY_REPORT.md
 
-      - name:  Upload Security Report
+      - name: Upload Security Report
         uses: actions/upload-artifact@v4
         with:
           name: security-report
@@ -407,11 +407,11 @@ jobs:
   # Job 6: Pipeline Success Summary
   ###########################################################################
   pipeline-success:
-    name:  Pipeline Success Summary
+    name: Pipeline Success Summary
     runs-on: ubuntu-latest
     needs: [code-quality, build-push, infrastructure-check]
     if: success()
-    
+
     steps:
       - name: 🎉 Success Message
         run: |
@@ -438,4 +438,3 @@ jobs:
           echo "  4. Test all endpoints"
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-

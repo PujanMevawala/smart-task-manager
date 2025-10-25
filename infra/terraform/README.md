@@ -16,6 +16,7 @@ This directory contains Terraform configurations to deploy the Smart Task Manage
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 ```bash
 terraform >= 1.0
 kubectl configured with Minikube context
@@ -40,14 +41,14 @@ terraform output
 
 ## 📋 Resources Created
 
-| Resource | Count | Description |
-|----------|-------|-------------|
-| Namespace | 1 | Application namespace |
-| Secrets | 1 | JWT + MongoDB credentials |
-| ConfigMaps | 1 | MongoDB URI |
-| Deployments | 4 | Auth, Task, Board, MongoDB |
-| Services | 4 | ClusterIP services |
-| Ingress | 1 | NGINX ingress rules |
+| Resource    | Count | Description                |
+| ----------- | ----- | -------------------------- |
+| Namespace   | 1     | Application namespace      |
+| Secrets     | 1     | JWT + MongoDB credentials  |
+| ConfigMaps  | 1     | MongoDB URI                |
+| Deployments | 4     | Auth, Task, Board, MongoDB |
+| Services    | 4     | ClusterIP services         |
+| Ingress     | 1     | NGINX ingress rules        |
 
 ## 🔧 Configuration
 
@@ -63,15 +64,15 @@ terraform apply \
 
 ### Key Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `namespace` | `default` | Kubernetes namespace |
-| `environment` | `production` | Environment name |
-| `replicas` | `1` | Pod replicas per service |
-| `image_pull_policy` | `Never` | Image pull policy |
-| `mongo_uri` | `mongodb://mongo:27017/...` | Database connection |
-| `jwt_secret` | (set) | JWT signing secret |
-| `ingress_host` | `localhost` | Ingress hostname |
+| Variable            | Default                     | Description              |
+| ------------------- | --------------------------- | ------------------------ |
+| `namespace`         | `default`                   | Kubernetes namespace     |
+| `environment`       | `production`                | Environment name         |
+| `replicas`          | `1`                         | Pod replicas per service |
+| `image_pull_policy` | `Never`                     | Image pull policy        |
+| `mongo_uri`         | `mongodb://mongo:27017/...` | Database connection      |
+| `jwt_secret`        | (set)                       | JWT signing secret       |
+| `ingress_host`      | `localhost`                 | Ingress hostname         |
 
 ## 📊 Outputs
 
@@ -108,6 +109,7 @@ terraform plan -out=tfplan
 ## 🛠️ Management
 
 ### Update Infrastructure
+
 ```bash
 # Modify variables or resources
 # Then apply changes
@@ -115,6 +117,7 @@ terraform apply
 ```
 
 ### Destroy Infrastructure
+
 ```bash
 # Remove all resources
 terraform destroy
@@ -124,6 +127,7 @@ terraform destroy -target=kubernetes_deployment.auth
 ```
 
 ### State Management
+
 ```bash
 # List resources
 terraform state list
@@ -148,6 +152,7 @@ terraform apply -var="auth_image=auth-service:v2.0"
 ## 🔄 CI/CD Integration
 
 ### GitHub Actions
+
 ```yaml
 - name: Terraform Apply
   run: |
@@ -157,6 +162,7 @@ terraform apply -var="auth_image=auth-service:v2.0"
 ```
 
 ### Local Deployment
+
 ```bash
 ./scripts/deploy-terraform.sh
 ```
@@ -164,6 +170,7 @@ terraform apply -var="auth_image=auth-service:v2.0"
 ## 🐛 Troubleshooting
 
 ### Issue: Provider configuration errors
+
 ```bash
 # Check kubeconfig
 kubectl config current-context
@@ -173,6 +180,7 @@ terraform apply -var="kube_context=minikube"
 ```
 
 ### Issue: Image pull errors
+
 ```bash
 # Load images into Minikube
 minikube image load auth-service:latest
@@ -181,6 +189,7 @@ minikube image load board-service:latest
 ```
 
 ### Issue: State lock
+
 ```bash
 # Force unlock (use with caution)
 terraform force-unlock LOCK_ID
@@ -203,7 +212,6 @@ terraform force-unlock LOCK_ID
 ---
 
 **Score Contribution**: Infrastructure as Code (IaC) - **2.5/2.5** ✅
-
 
 This will create a namespace and simple Deployments/Services that reference local images (use `docker build` to create images first).
 

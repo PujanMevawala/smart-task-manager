@@ -1,52 +1,99 @@
 #!/bin/bash
 ###############################################################################
 # Ngrok Tunnel Setup Script for Smart Task Manager
-# Exposes local Kubernetes ingress to public internet for testing/demo
+# Exposes local Kubernetes services to public internet for testing/demo
 ###############################################################################
 
 set -e
 
-echo "🚀 Smart Task Manager - Public Access Setup"
-echo "==========================================="
+echo "========================================="
+echo "Smart Task Manager - Public Access Setup"
+echo "========================================="
+echo ""
 
 # Check if ngrok is installed
 if ! command -v ngrok &> /dev/null; then
-    echo "❌ ngrok is not installed"
-    echo "📥 Install ngrok:"
+    echo "ERROR: ngrok is not installed"
+    echo "Install ngrok:"
     echo "   macOS: brew install ngrok/ngrok/ngrok"
     echo "   Linux: snap install ngrok"
     echo "   Or visit: https://ngrok.com/download"
     exit 1
 fi
 
-# Check if minikube tunnel is running
-if ! pgrep -f "minikube tunnel" > /dev/null; then
-    echo "⚠️  Minikube tunnel not detected"
-    echo "💡 Run in another terminal: sudo minikube tunnel"
-    read -p "Press Enter when tunnel is ready..."
-fi
+echo "Step 1: Setting up port forwarding for Kubernetes services..."
+echo "-----------------------------------------------------------"
 
-# Get ngrok auth token from environment or prompt
-if [ -z "$NGROK_AUTHTOKEN" ]; then
-    echo "⚠️  NGROK_AUTHTOKEN not set"
-    echo "Get your token from: https://dashboard.ngrok.com/get-started/your-authtoken"
-    read -p "Enter ngrok authtoken: " NGROK_AUTHTOKEN
-    ngrok authtoken "$NGROK_AUTHTOKEN"
-fi
+# Kill any existing port-forwards
+pkill -f "kubectl port-forward" 2>/dev/null || true
+sleep 2
 
-echo ""
-echo "🌐 Starting ngrok tunnel on port 80..."
-echo "📊 Dashboard will be available at: http://localhost:4040"
-echo ""
-echo "✅ Your application will be accessible at the public URL shown below"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+# Start port forwarding for all services
+echo "  - Forwarding auth-service (8000:80)..."
+kubectl port-forward -n default svc/auth-service 8000:80 > /dev/null 2>&1 &
+AUTH_PID=$!
 
-# Start ngrok in background and capture URL
-ngrok http 80 --log=stdout > /tmp/ngrok.log &
-NGROK_PID=$!
+echo "  - Forwarding task-service (5001:80)..."
+kubectl port-forward -n default svc/task-service 5001:80 > /dev/null 2>&1 &
+TASK_PID=$!
 
-# Wait for ngrok to start
+echo "  - Forwarding board-service (8002:80)..."
+kubectl port-forward -n default svc/board-service 8002:80 > /dev/null 2>&1 &
+BOARD_PID=$!
+
+# Wait for port forwards to be ready
 sleep 3
+
+# Verify services are accessible
+echo ""
+echo "Step 2: Verifying local services..."
+echo "-----------------------------------------------------------"
+if curl -s http://localhost:8000/api/auth/ > /dev/null 2>&1; then
+    echo "  ✓ Auth service accessible at http://localhost:8000"
+else
+    echo "  ✗ Auth service not responding"
+fi
+
+if curl -s http://localhost:5001/ > /dev/null 2>&1; then
+    echo "  ✓ Task service accessible at http://localhost:5001"
+else
+    echo "  ✗ Task service not responding"
+fi
+
+if curl -s http://localhost:8002/ > /dev/null 2>&1; then
+    echo "  ✓ Board service accessible at http://localhost:8002"
+else
+    echo "  ✗ Board service not responding"
+fi
+
+echo ""
+echo "Step 3: Starting nginx reverse proxy..."
+echo "-----------------------------------------------------------"
+
+# Start nginx with custom config if available
+if [ -f "nginx-proxy.conf" ]; then
+    nginx -c "$(pwd)/nginx-proxy.conf" -g "daemon off;" > /dev/null 2>&1 &
+    NGINX_PID=$!
+    echo "  ✓ Nginx proxy started on port 9090"
+    NGROK_PORT=9090
+else
+    echo "  ! nginx-proxy.conf not found, using auth-service directly"
+    NGROK_PORT=8000
+fi
+
+sleep 2
+
+echo ""
+echo "Step 4: Starting ngrok tunnel..."
+echo "-----------------------------------------------------------"
+echo "  Dashboard: http://localhost:4040"
+echo ""
+echo "IMPORTANT: Press Ctrl+C to stop all services"
+echo "==========================================="
+echo ""
+
+# Start ngrok tunnel
+ngrok http $NGROK_PORT --log=stdout
 
 # Get public URL
 PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"[^"]*' | grep -o 'https://[^"]*' | head -1)
