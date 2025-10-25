@@ -258,7 +258,7 @@ minikube addons enable ingress
 
 2. Build images locally and load into minikube:
 
-```bash
+````bash
 docker build -t auth-service:latest ./auth-service
 docker build -t task-service:latest ./task-service
 # Smart Task Manager — Runbook & Summary
@@ -285,13 +285,14 @@ This repository contains a simple microservices task manager (three Node.js serv
 ```bash
 # create/update k8s secret from auth-service .env (local)
 kubectl create secret generic smart-secrets --from-env-file=auth-service/.env --dry-run=client -o yaml | kubectl apply -f -
-```
+````
 
 If a secret was pushed to a remote previously, rotate it immediately. I can prepare a safe history-purge plan if needed.
 
 ---
 
 ## Quick run — Docker Compose (fast local dev)
+
 1. Copy examples locally (do not commit these files):
 
 ```bash
@@ -308,6 +309,7 @@ docker compose up --build
 ```
 
 3. Services:
+
 - Auth: http://localhost:8000
 - Task: http://localhost:8001
 - Board: http://localhost:8002
@@ -321,6 +323,7 @@ docker compose down
 ---
 
 ## Run on Kubernetes (minikube)
+
 1. Start minikube and enable ingress:
 
 ```bash
@@ -376,6 +379,7 @@ Tip: `minikube service <svc> --url` gives a quick service URL for debugging.
 ---
 
 ## CI/CD and image registry
+
 - The workflow builds and scans images but doesn't push them to a registry by default. To enable CI-driven deploys you should:
   1. Create a registry (GHCR/Docker Hub/ECR) and a service account or token.
   2. Add registry credentials as GitHub Secrets.
@@ -385,11 +389,13 @@ Tip: `minikube service <svc> --url` gives a quick service URL for debugging.
 ---
 
 ## Security & production notes
+
 - Do not store secrets as plain files in git. Use secret managers (Vault, cloud KMS) and generate k8s secrets at deploy time.
 - Add readiness/liveness probes, resource requests/limits, and PDBs before production.
 - Add image and dependency scanning in CI (Trivy + npm audit/Snyk).
 
 ## Files changed recently (high level)
+
 - Multi-stage Dockerfiles for services
 - Per-service `.dockerignore` files
 - `k8s/` manifests updated to use `ClusterIP` services, with an `ingress.yaml` for external routing
@@ -398,6 +404,7 @@ Tip: `minikube service <svc> --url` gives a quick service URL for debugging.
 - `.env.example` files added; tracked `.env` files removed
 
 ## Next optional tasks I can do for you
+
 - Replace `k8s/secrets.yaml` with `k8s/secrets.yaml.template` and commit (to avoid storing base64 secrets in git).
 - Add a `Makefile` or `scripts/dev-deploy.sh` that automates build/load/apply for minikube.
 - Run a full git-history secret scan and prepare a purge plan if any secrets are present in history.
