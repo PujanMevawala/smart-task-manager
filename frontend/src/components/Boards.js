@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { taskService } from '../services/taskService';
+import { boardService } from '../services/taskService';
 import './Boards.css';
 
 const Boards = () => {
@@ -19,10 +19,11 @@ const Boards = () => {
 
     const fetchBoards = async () => {
         try {
-            const data = await taskService.getBoards();
+            const data = await boardService.getBoards();
             setBoards(data);
         } catch (err) {
-            setError('Failed to fetch boards');
+            console.error('Boards fetch error:', err);
+            setError(err.response?.data?.message || 'Failed to fetch boards');
         } finally {
             setLoading(false);
         }
@@ -34,9 +35,9 @@ const Boards = () => {
 
         try {
             if (editingBoard) {
-                await taskService.updateBoard(editingBoard._id, formData);
+                await boardService.updateBoard(editingBoard._id, formData);
             } else {
-                await taskService.createBoard(formData);
+                await boardService.createBoard(formData);
             }
 
             await fetchBoards();
@@ -51,7 +52,7 @@ const Boards = () => {
         if (!window.confirm('Are you sure you want to delete this board?')) return;
 
         try {
-            await taskService.deleteBoard(id);
+            await boardService.deleteBoard(id);
             await fetchBoards();
         } catch (err) {
             setError('Failed to delete board');
@@ -172,10 +173,19 @@ const BoardCard = ({ board, onEdit, onDelete }) => (
             <h3 className="board-card-title">{board.name}</h3>
             <div className="board-card-actions">
                 <button onClick={() => onEdit(board)} className="btn-icon" title="Edit">
-                    ✏️
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
                 </button>
                 <button onClick={() => onDelete(board._id)} className="btn-icon" title="Delete">
-                    🗑️
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                    </svg>
                 </button>
             </div>
         </div>

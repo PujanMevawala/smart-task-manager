@@ -62,4 +62,16 @@ export const boardService = {
         const response = await api.delete(`/api/boards/${id}`);
         return response.data;
     },
+
+    // Add member to board
+    addMember: async (boardId, userId) => {
+        const response = await api.post(`/api/boards/${boardId}/members`, { userId });
+        return response.data;
+    },
+
+    // Remove member from board
+    removeMember: async (boardId, userId) => {
+        const response = await api.delete(`/api/boards/${boardId}/members/${userId}`);
+        return response.data;
+    },
 };

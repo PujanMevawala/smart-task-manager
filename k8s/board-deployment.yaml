@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: board-service
-          image: board-service:latest
+          image: board-service:v2.0
           imagePullPolicy: Never
           ports:
             - containerPort: 8002

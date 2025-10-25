@@ -94,3 +94,54 @@ exports.deleteBoard = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+// @desc    Add member to board
+// @route   POST /api/boards/:id/members
+// @access  Private
+exports.addMember = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const board = await Board.findById(req.params.id);
+
+    if (!board) return res.status(404).json({ message: 'Board not found' });
+
+    if (board.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Only board owner can add members' });
+    }
+
+    if (board.members.includes(userId)) {
+      return res.status(400).json({ message: 'User already a member' });
+    }
+
+    board.members.push(userId);
+    await board.save();
+    res.json(board);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// @desc    Remove member from board
+// @route   DELETE /api/boards/:id/members/:userId
+// @access  Private
+exports.removeMember = async (req, res) => {
+  try {
+    const board = await Board.findById(req.params.id);
+
+    if (!board) return res.status(404).json({ message: 'Board not found' });
+
+    if (board.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Only board owner can remove members' });
+    }
+
+    if (req.params.userId === board.createdBy.toString()) {
+      return res.status(400).json({ message: 'Cannot remove board owner' });
+    }
+
+    board.members = board.members.filter(m => m.toString() !== req.params.userId);
+    await board.save();
+    res.json(board);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
