@@ -3,15 +3,10 @@
 # Manages: Namespace, Secrets, MongoDB, Microservices, Ingress
 ###############################################################################
 
-# Create dedicated namespace
-resource "kubernetes_namespace" "app_ns" {
+# Use existing namespace (default namespace always exists in Kubernetes)
+data "kubernetes_namespace" "app_ns" {
   metadata {
     name = var.namespace
-    labels = {
-      name        = var.namespace
-      environment = var.environment
-      managed-by  = "terraform"
-    }
   }
 }
 
@@ -22,7 +17,7 @@ resource "kubernetes_namespace" "app_ns" {
 resource "kubernetes_secret" "app_secrets" {
   metadata {
     name      = "smart-secrets"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
   }
 
   data = {
@@ -36,7 +31,7 @@ resource "kubernetes_secret" "app_secrets" {
 resource "kubernetes_config_map" "mongo_config" {
   metadata {
     name      = "mongo-config"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
   }
 
   data = {
@@ -51,7 +46,7 @@ resource "kubernetes_config_map" "mongo_config" {
 resource "kubernetes_deployment" "mongo" {
   metadata {
     name      = "mongo"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
     labels    = { app = "mongo" }
   }
 
@@ -104,7 +99,7 @@ resource "kubernetes_deployment" "mongo" {
 resource "kubernetes_service" "mongo" {
   metadata {
     name      = "mongo"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
   }
 
   spec {
@@ -126,7 +121,7 @@ resource "kubernetes_service" "mongo" {
 resource "kubernetes_deployment" "auth" {
   metadata {
     name      = "auth-service"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
     labels    = { app = "auth-service", tier = "backend" }
   }
 
@@ -221,7 +216,7 @@ resource "kubernetes_deployment" "auth" {
 resource "kubernetes_service" "auth" {
   metadata {
     name      = "auth-service"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
   }
 
   spec {
@@ -244,7 +239,7 @@ resource "kubernetes_service" "auth" {
 resource "kubernetes_deployment" "task" {
   metadata {
     name      = "task-service"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
     labels    = { app = "task-service", tier = "backend" }
   }
 
@@ -339,7 +334,7 @@ resource "kubernetes_deployment" "task" {
 resource "kubernetes_service" "task" {
   metadata {
     name      = "task-service"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
   }
 
   spec {
@@ -362,7 +357,7 @@ resource "kubernetes_service" "task" {
 resource "kubernetes_deployment" "board" {
   metadata {
     name      = "board-service"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
     labels    = { app = "board-service", tier = "backend" }
   }
 
@@ -457,7 +452,7 @@ resource "kubernetes_deployment" "board" {
 resource "kubernetes_service" "board" {
   metadata {
     name      = "board-service"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
   }
 
   spec {
@@ -480,7 +475,7 @@ resource "kubernetes_service" "board" {
 resource "kubernetes_ingress_v1" "app_ingress" {
   metadata {
     name      = "smart-ingress"
-    namespace = kubernetes_namespace.app_ns.metadata[0].name
+    namespace = data.kubernetes_namespace.app_ns.metadata[0].name
     annotations = {
       "kubernetes.io/ingress.class"                = "nginx"
       "nginx.ingress.kubernetes.io/rewrite-target" = "/$2"

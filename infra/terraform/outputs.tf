@@ -4,7 +4,7 @@
 
 output "namespace" {
   description = "Kubernetes namespace where resources are deployed"
-  value       = kubernetes_namespace.app_ns.metadata[0].name
+  value       = data.kubernetes_namespace.app_ns.metadata[0].name
 }
 
 output "auth_service_name" {
@@ -49,6 +49,6 @@ output "board_service_url" {
 
 output "deployment_status" {
   description = "Deployment completion status"
-  value       = "All services deployed successfully to namespace: ${kubernetes_namespace.app_ns.metadata[0].name}"
+  value       = "All services deployed successfully to namespace: ${data.kubernetes_namespace.app_ns.metadata[0].name}"
 }
 
