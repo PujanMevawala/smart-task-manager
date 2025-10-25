@@ -25,6 +25,7 @@ npm start
 ### Steps
 
 1. **Start Frontend**
+
    ```bash
    cd frontend
    npm install
@@ -32,23 +33,25 @@ npm start
    ```
 
 2. **Restart Nginx Proxy**
+
    ```bash
    # Stop existing nginx
    pkill -f "nginx.*9090"
-   
+
    # Start with updated config
    cd ..
    nginx -c $(pwd)/nginx-proxy.conf
    ```
 
 3. **Verify**
+
    ```bash
    # Check frontend
    curl http://localhost:3000
-   
+
    # Check via proxy
    curl http://localhost:9090
-   
+
    # Check public URL
    curl https://<your-ngrok-url>.ngrok-free.dev
    ```
@@ -104,6 +107,7 @@ curl http://localhost:3000
 ### 5. Update Nginx Proxy
 
 The nginx proxy should already be configured to route:
+
 - `/` -> Frontend (localhost:3000)
 - `/api/auth` -> Auth service (localhost:8000)
 - `/api/tasks` -> Task service (localhost:5001)
@@ -121,6 +125,7 @@ The nginx proxy should already be configured to route:
 ### Development
 
 **package.json**
+
 ```json
 {
   "proxy": "http://localhost:9090"
@@ -130,12 +135,14 @@ The nginx proxy should already be configured to route:
 ### Production (Kubernetes)
 
 **nginx.conf** (in frontend directory)
+
 - Serves built files from `/usr/share/nginx/html`
 - Handles client-side routing
 - Gzip compression enabled
 - Security headers set
 
 **Dockerfile**
+
 - Multi-stage build
 - Stage 1: Build React app
 - Stage 2: Serve with Nginx
@@ -237,21 +244,23 @@ Nginx Proxy (Port 9090)
 
 ## URLs
 
-| Service | Local | Via Proxy | Public (Ngrok) |
-|---------|-------|-----------|----------------|
-| Frontend | http://localhost:3000 | http://localhost:9090 | https://<url>.ngrok-free.dev |
-| Auth API | http://localhost:8000 | http://localhost:9090/api/auth | https://<url>.ngrok-free.dev/api/auth |
-| Task API | http://localhost:5001 | http://localhost:9090/api/tasks | https://<url>.ngrok-free.dev/api/tasks |
+| Service   | Local                 | Via Proxy                        | Public (Ngrok)                          |
+| --------- | --------------------- | -------------------------------- | --------------------------------------- |
+| Frontend  | http://localhost:3000 | http://localhost:9090            | https://<url>.ngrok-free.dev            |
+| Auth API  | http://localhost:8000 | http://localhost:9090/api/auth   | https://<url>.ngrok-free.dev/api/auth   |
+| Task API  | http://localhost:5001 | http://localhost:9090/api/tasks  | https://<url>.ngrok-free.dev/api/tasks  |
 | Board API | http://localhost:8002 | http://localhost:9090/api/boards | https://<url>.ngrok-free.dev/api/boards |
 
 ## Performance Tips
 
 ### Development
+
 - Use React DevTools for debugging
 - Enable React Profiler for performance analysis
 - Use browser DevTools Network tab to debug API calls
 
 ### Production
+
 - Build optimized bundle: `npm run build`
 - Verify bundle size: `du -sh build/`
 - Test gzip compression
