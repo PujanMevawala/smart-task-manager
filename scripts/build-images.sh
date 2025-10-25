@@ -41,11 +41,20 @@ build_image "auth-service" "8000"
 build_image "task-service" "5001"
 build_image "board-service" "8002"
 
+# Build frontend
+echo ""
+echo "📦 Building frontend..."
+IMAGE_NAME="smart-task-manager-frontend:latest"
+docker build \
+    -t "$IMAGE_NAME" \
+    "./frontend"
+echo "✅ Built: $IMAGE_NAME"
+
 echo ""
 echo "🎉 All images built successfully!"
 echo ""
 echo "📋 Built images:"
-docker images | grep -E "auth-service|task-service|board-service" | head -6
+docker images | grep -E "auth-service|task-service|board-service|frontend" | head -8
 
 # If using Minikube, load images
 if command -v minikube &> /dev/null && minikube status &> /dev/null; then
@@ -57,6 +66,7 @@ if command -v minikube &> /dev/null && minikube status &> /dev/null; then
         minikube image load auth-service:latest
         minikube image load task-service:latest
         minikube image load board-service:latest
+        minikube image load smart-task-manager-frontend:latest
         echo "✅ Images loaded into Minikube"
     fi
 fi
