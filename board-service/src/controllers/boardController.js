@@ -5,7 +5,11 @@ const Board = require('../models/Board');
 // @access  Private
 exports.getBoards = async (req, res) => {
   try {
-    const boards = await Board.find({ members: req.user.id });
+    // populate members with name/email so frontend can display friendly info
+    const boards = await Board.find({ members: req.user.id })
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
+
     res.json(boards);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -17,11 +21,16 @@ exports.getBoards = async (req, res) => {
 // @access  Private
 exports.getBoardById = async (req, res) => {
   try {
-    const board = await Board.findById(req.params.id);
+    // populate members and createdBy for friendly display
+    const board = await Board.findById(req.params.id)
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
+
     if (!board) return res.status(404).json({ message: 'Board not found' });
 
-    // check membership
-    if (!board.members.includes(req.user.id)) {
+    // check membership (members may be populated objects)
+    const isMember = board.members.some((m) => (m._id ? m._id.toString() : m.toString()) === req.user.id);
+    if (!isMember) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
@@ -45,7 +54,11 @@ exports.createBoard = async (req, res) => {
     });
 
     await board.save();
-    res.status(201).json(board);
+    // return populated board for client convenience
+    const populated = await Board.findById(board._id)
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
+    res.status(201).json(populated);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -115,7 +128,11 @@ exports.addMember = async (req, res) => {
 
     board.members.push(userId);
     await board.save();
-    res.json(board);
+
+    const populated = await Board.findById(board._id)
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
+    res.json(populated);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -140,7 +157,11 @@ exports.removeMember = async (req, res) => {
 
     board.members = board.members.filter(m => m.toString() !== req.params.userId);
     await board.save();
-    res.json(board);
+
+    const populated = await Board.findById(board._id)
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
+    res.json(populated);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

@@ -9,6 +9,8 @@ connectDB();
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Trust proxy headers (X-Forwarded-Proto) so Express knows the original request scheme behind nginx/ngrok
+app.set('trust proxy', true);
 
 // Health
 app.get('/', (req, res) => res.send('Task Service running'));

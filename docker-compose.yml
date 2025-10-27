@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: stm_mongo
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: stm_auth
+    restart: unless-stopped
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"
+
+  task-service:
+    build:
+      context: ./task-service
+      dockerfile: Dockerfile
+    container_name: stm_task
+    restart: unless-stopped
+    env_file:
+      - ./task-service/.env
+    depends_on:
+      - mongo
+    ports:
+      - "8001:8001"
+
+  board-service:
+    build:
+      context: ./board-service
+      dockerfile: Dockerfile
+    container_name: stm_board
+    restart: unless-stopped
+    env_file:
+      - ./board-service/.env
+    depends_on:
+      - mongo
+    ports:
+      - "8002:8002"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stm_frontend
+    restart: unless-stopped
+    ports:
+      - "9090:80"
+    depends_on:
+      - auth-service
+      - task-service
+      - board-service
+
+volumes:
+  mongo-data:
+    driver: local
+
+# Notes:
+# - Dockerfiles are still kept per-service because they describe how to build each image.
+#   docker-compose orchestrates building and running them together for local development.
+# - For production we recommend using your existing Kubernetes manifests in `k8s/`.

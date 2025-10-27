@@ -31,7 +31,8 @@ src/**/*.spec.js
 .DS_Store
 Thumbs.db
 
-# Build artifacts (build folder is needed for multi-stage)
-# But exclude source files after build
-src/
-public/
+# Note: Do NOT exclude `src/` or `public/` here because the Docker multi-stage
+# build copies the source into the build stage and `react-scripts build`
+# requires `public/index.html` to exist in the build context.
+# We still exclude the final `build/` output which shouldn't be in the context.
+build/
